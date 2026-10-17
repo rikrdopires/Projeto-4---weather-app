@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <link rel="stylesheet" href="style.css" >
+</head>
+
+<body>
+    <header class="app-header">
+        <div class="container">
+            <h1>Weather App</h1>
+            <p>Informações meteorológicas para você!</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <section aria-labelledby="welcome-title">
+            <h2 id="welcome-title">Consulte o clima</h2>
+            <p>Digite o nome da cidade para consultar o clima.</p>
+
+            <form id="city-search-form">
+                <label for="city-input">Nome da cidade</label>
+                
+                <div class="search-group">
+                    <input
+                    type="text"
+                    id="city-input"
+                    name="city"
+                    placeholder="ex.: Salvador"
+                    required
+                    >
+
+                    <button type="submit">Pesquisar</button>
+                </div>                
+            </form>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
