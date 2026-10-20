@@ -35,6 +35,25 @@
                     <button type="submit">Pesquisar</button>
                 </div>                
             </form>
+
+            <div id="search-results">
+                <p id="search-status" role="status" aria-live="polite"></p>
+                <ul id="city-results-list"></ul>
+            </div>
+        </section>
+
+        <section id="current-weather" aria-labelledby="weather-title">
+            <h2 id="weather-title">Clima atual</h2>
+
+            <p id="weather-status" role="status" aria-live="polite">Selecione uma cidade para consultar o clima.</p>
+
+            <div class="weather-card" hidden>
+                <h3 id="weather-city"></h3>
+                <p id="weather-temperature"></p>
+                <p id="weather-description"></p>
+                <p id="weather-humidity"></p>
+                <p id="weather-wind"></p>
+            </div>
         </section>
     </main>
 

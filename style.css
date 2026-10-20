@@ -106,3 +106,83 @@ main {
 }
 
 /* UTILITIES */
+#search-results {
+    max-width: 600px;
+    margin-top: 24px;
+}
+
+#search-status {
+    color: var(--color-text);
+}
+
+#city-results-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 12px;
+}
+
+.city-result {
+    background-color: var(--color-surface);
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.city-result strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.city-result span {
+    display: block;
+    font-size: 14px;
+    color: #475467;
+}
+
+/* apresentacao do clima */
+.city-result button {
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.city-result button:hover {
+    color: var(--color-primary);
+}
+
+.city-result button:focus-visible {
+    outline-offset: 4px;
+    outline: 2px solid var(--color-primary);
+}
+
+#current-weather {
+    max-width: 600px;
+    margin-top: 32px;
+}
+
+.weather-card {
+    background-color: var(--color-surface);
+    padding: 24px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+}
+
+.weather-card[hidden] {
+    display: none;
+}
+
+#weather-temperature {
+    font-size: 40px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+#weather-description {
+    color: #475467;
+}
