@@ -105,11 +105,11 @@ main {
     }
 }
 
-/* UTILITIES */
 #search-results {
     max-width: 600px;
     margin-top: 24px;
 }
+
 
 #search-status {
     color: var(--color-text);
@@ -186,3 +186,36 @@ main {
 #weather-description {
     color: #475467;
 }
+
+#daily-forecast {
+    margin-top: 32px;
+}
+
+#forecast-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+    gap: 16px;
+}
+
+.forecast-card {
+    background-color: var(--color-surface);
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.forecast-card h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+}
+
+.forecast-card p {
+    margin-bottom: 8px;
+}
+
+.forecast-card .forecast-temperature {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+/* UTILITIES */

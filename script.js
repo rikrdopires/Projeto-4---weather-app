@@ -26,6 +26,10 @@ const weatherHumidity = document.getElementById("weather-humidity");
 const weatherWind = document.getElementById("weather-wind");
 
 
+   // Acessar a mensagem de status dos conteiners (5 dias)
+const forecastStatus = document.getElementById("forecast-status");
+const forecastList = document.getElementById("forecast-list");
+
 
 // ESTADOS
 
@@ -64,6 +68,23 @@ async function searchCurrentWeather(city) {
     return data.current;
 }
 
+  // previsão 5 dias
+async function searchDailyForecast(city) {
+    const variables = "temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code";
+
+    const url = `${WEATHER_API_URL}?latitude=${city.latitude}&longitude=${city.longitude}&daily=${variables}&timezone=auto&forecast_days=5`;
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+        throw new Error("Falha na consulta da previsão.");
+    }
+
+    const data = await response.json();
+    return data.daily;
+}
+
+
 function getWeatherDescription(code) {
     if (code === 0) return "Céu limpo";
     if (code >= 1 && code <= 3) return "Parcialmente nublado";
@@ -86,7 +107,52 @@ function renderCurrentWeather(city, weather) {
     weatherCard.hidden = false;
 }
 
+  // renderizar cartões 5 dias de previsão
+function renderDailyForecast(daily) {
+    forecastList.replaceChildren();
+
+    daily.time.forEach((date, index) => {
+        const card = document.createElement("article");
+        const title = document.createElement("h3");
+        const temperature = document.createElement("p");
+        const precipitation = document.createElement("p");
+        const description = document.createElement("p");
+
+        card.classList.add("forecast-card");
+        temperature.classList.add("forecast-temperature");
+        title.textContent = date.split("-").reverse().join("/");
+        temperature.textContent = `Máx: ${daily.temperature_2m_max[index]} °C | Mín: ${daily.temperature_2m_min[index]} °C`;
+        precipitation.textContent = `Precipitação: ${daily.precipitation_sum[index]} mm`;
+        description.textContent = getWeatherDescription(daily.weather_code[index]);
+
+        card.appendChild(title);
+        card.appendChild(temperature);
+        card.appendChild(precipitation);
+        card.appendChild(description);
+
+        forecastList.appendChild(card);
+    });
+}
+
+async function loadDailyForecast(city) {
+    forecastList.replaceChildren();
+    forecastStatus.textContent = "Consultando previsão...";
+
+    try {
+        const daily = await searchDailyForecast(city);
+
+        renderDailyForecast(daily);
+        forecastStatus.textContent = "";
+
+    } catch (error) {
+        forecastStatus.textContent = "Não foi possível consultar a previsão.";
+        console.error(error);
+    }
+}
+
+  //integrar os clickes
 async function handleCitySelection(city) {
+    loadDailyForecast (city);
     weatherCard.hidden = true;
     weatherStatus.textContent = `Consultando o clima de ${city.name}...`;
 
