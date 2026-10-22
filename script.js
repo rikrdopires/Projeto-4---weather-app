@@ -4,6 +4,8 @@ const GEOCODING_API_URL = "https://geocoding-api.open-meteo.com/v1/search";
 
 const WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast";
 
+const HISTORY_STORAGE_KEY = "weather-recent-cities";
+
 
 // SELETORES DOM
    // consulte clima cidade
@@ -31,7 +33,18 @@ const forecastStatus = document.getElementById("forecast-status");
 const forecastList = document.getElementById("forecast-list");
 
 
+  // Registro de 5 cidades e armazenamento
+const historyStatus = document.getElementById("history-status");
+const recentCitiesList = document.getElementById("recent-cities-list");
+
+
+
 // ESTADOS
+  // Recuperar dados armazenados - cidades anteriores pesquisadas
+let recentCities = JSON.parse(
+    localStorage.getItem(HISTORY_STORAGE_KEY) || "[]"
+);
+
 
 
 // FUNCOES
@@ -150,6 +163,50 @@ async function loadDailyForecast(city) {
     }
 }
 
+  // Salvar histórico das cidades
+function saveRecentCity(city) {
+    recentCities = recentCities.filter((savedCity) => {
+        return savedCity.id !== city.id;
+    });
+
+    recentCities.unshift(city);
+    recentCities = recentCities.slice(0, 5);
+
+    localStorage.setItem(
+        HISTORY_STORAGE_KEY,
+        JSON.stringify(recentCities)
+    );
+
+    renderRecentCities();
+}
+
+function renderRecentCities() {
+    recentCitiesList.replaceChildren();
+
+    if (recentCities.length === 0) {
+        historyStatus.textContent = "Nenhuma cidade consultada recentemente.";
+        return;
+    }
+
+    historyStatus.textContent = "";
+
+    recentCities.forEach((city) => {
+        const listItem = document.createElement("li");
+        const button = document. createElement("button");
+
+        button.type = "button";
+        button.classList.add("recent-city-button");
+        button.textContent = `${city.name}, ${city.country}`;
+        button.addEventListener("click", () => {
+            handleCitySelection(city);
+        });
+
+        listItem.appendChild(button);
+        recentCitiesList.appendChild(listItem);
+    });
+}
+
+
   //integrar os clickes
 async function handleCitySelection(city) {
     loadDailyForecast (city);
@@ -160,6 +217,7 @@ async function handleCitySelection(city) {
         const weather = await searchCurrentWeather(city);
 
         renderCurrentWeather(city, weather);
+        saveRecentCity(city);
         weatherStatus.textContent = "";
 
     } catch (error) {
@@ -253,3 +311,4 @@ citySearchForm.addEventListener("submit", handleCitySearch);
 
 
 // INICIALIZACAO
+renderRecentCities();
