@@ -3,9 +3,25 @@
     ----color-background: #f4f7fb;
     --color-surface: #ffffff;
     --color-text: #1d2939;
+    --color-secondary-text: #475467;
     --color-primary: #2563eb;
+    --color-primary-hover: #1d4ed8;
+    --color-border: #cbd5e1;
+    --color-button-text: #ffffff;
     --spacing-base: 16px;
 }
+
+[data-theme="dark"] {
+    --color-background: #111827;
+    --color-surface: #1f2937;
+    --color-text: #f9fafb;
+    --color-secondary-text: #cbd5e1;
+    --color-primary: #60a5fa;
+    --color-primary-hover: #93c5fd;
+    --color-border: #475569;
+    --color-button-text: #111827;
+}
+
 
 /* GENERIC - resets básicos */
 * {
@@ -19,7 +35,7 @@ body {
 /* ELEMENTOS */
 
 body {
-    background-color: var(----color-background);
+    background-color: var(--color-background);
     color: var(--color-text);
     font-family: Arial, sans-serif;
     line-height: 1.5;
@@ -48,6 +64,33 @@ p {
     margin-bottom: 8px;
 }
 
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.theme-toggle {
+    padding: 10px 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    font: inherit;
+    cursor: pointer;
+}
+
+.theme-toggle:hover {
+    border-color: var(--color-primary);
+}
+
+.theme-toggle:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+}
+
 main {
     padding-block: calc(var(--spacing-base) * 2);
 }
@@ -73,7 +116,9 @@ main {
     flex: 1;
     min-width: 0;
     padding: 12px 16px;
-    border: 1px solid #cbd5e1;
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
     border-radius: 6px;
     font: inherit;
 }
@@ -88,7 +133,7 @@ main {
     border: none;
     border-radius: 8px;
     background-color: var(--color-primary);
-    color: #ffffff;
+    color: var(--color-button-text);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
@@ -96,7 +141,7 @@ main {
 }
 
 .search-group button:hover {
-    background-color: #1d4ed8;
+    background-color: var(--color-primary-hover);
 }
 
 @media (max-width: 480px) {
@@ -125,7 +170,7 @@ main {
 
 .city-result {
     background-color: var(--color-surface);
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 16px;
 }
@@ -138,7 +183,7 @@ main {
 .city-result span {
     display: block;
     font-size: 14px;
-    color: #475467;
+    color: var(--color-secondary-text);
 }
 
 /* apresentacao do clima */
@@ -169,7 +214,7 @@ main {
 .weather-card {
     background-color: var(--color-surface);
     padding: 24px;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--color-border);
     border-radius: 12px;
 }
 
@@ -184,7 +229,7 @@ main {
 }
 
 #weather-description {
-    color: #475467;
+    color: var(--color-secondary-text);
 }
 
 #daily-forecast {
@@ -199,7 +244,7 @@ main {
 
 .forecast-card {
     background-color: var(--color-surface);
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--color-border);
     border-radius: 12px;
     padding: 16px;
 }
@@ -244,7 +289,7 @@ main {
 
 .recent-city-button:hover {
     background-color: var(--color-primary);
-    color: #ffffff;
+    color: var(--color-button-text);
 }
 
 .recent-city-button:focus-visible {

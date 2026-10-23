@@ -6,6 +6,8 @@ const WEATHER_API_URL = "https://api.open-meteo.com/v1/forecast";
 
 const HISTORY_STORAGE_KEY = "weather-recent-cities";
 
+const THEME_STORAGE_KEY = "weather-theme";
+
 
 // SELETORES DOM
    // consulte clima cidade
@@ -37,6 +39,9 @@ const forecastList = document.getElementById("forecast-list");
 const historyStatus = document.getElementById("history-status");
 const recentCitiesList = document.getElementById("recent-cities-list");
 
+  // Tema escuro
+const themeToggle = document.getElementById("theme-toggle");
+
 
 
 // ESTADOS
@@ -45,9 +50,36 @@ let recentCities = JSON.parse(
     localStorage.getItem(HISTORY_STORAGE_KEY) || "[]"
 );
 
+  //  tema escuro
+let currentTheme = localStorage.getItem(THEME_STORAGE_KEY) === "dark"
+    ? "dark"
+    : "light";
+
 
 
 // FUNCOES
+   // Aplicar e alterar tema
+function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+
+    const isDark = theme === "dark";
+
+    themeToggle.textContent = isDark ? "Modo claro" : "Modo escuro";
+    themeToggle.setAttribute(
+        "aria-label",
+        isDark ? "Ativar modo claro" : "Ativar modo escuro"
+    );
+    themeToggle.setAttribute("aria-pressed", String(isDark));
+}
+
+function toggleTheme() {
+    currentTheme = currentTheme === "light" ? "dark" : "light";
+
+    localStorage.setItem(THEME_STORAGE_KEY, currentTheme);
+    applyTheme(currentTheme);
+}
+
+
   // consultar API e retornar as localidades encontradas
 async function searchCities(cityName) {
     const url = `${GEOCODING_API_URL}?name=${encodeURIComponent(cityName)}&count=5&language=pt`;
@@ -309,6 +341,12 @@ async function handleCitySearch(event) {
   // executar função de pesquisar cidade
 citySearchForm.addEventListener("submit", handleCitySearch);
 
+ // alternancia de tema
+themeToggle.addEventListener("click", toggleTheme);
+
+
 
 // INICIALIZACAO
 renderRecentCities();
+
+applyTheme(currentTheme);
