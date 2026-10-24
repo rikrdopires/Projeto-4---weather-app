@@ -55,6 +55,9 @@ const historicalStatus = document.getElementById("historical-status");
 const loadHistoryButton = document.getElementById("load-history");
 const historicalSummary = document.getElementById("historical-summary");
 
+    // Graficos climáticos
+const climateCharts = document.getElementById("climate-charts");
+
 
 // ESTADOS
   // Recuperar dados armazenados - cidades anteriores pesquisadas
@@ -73,6 +76,9 @@ let startYear = null;
 let endYear = null;
 
 let historicalData = null;
+
+    // Grafico climatico
+let climateChartInstances = [];
 
 
 
@@ -103,6 +109,7 @@ function populateYearSelects() {
 function updateHistoricalSelection() {
     historicalData = null;
     historicalSummary.hidden = true;
+    destroyClimateCharts();
 
     if (!selectedCity) {
         historicalStatus.textContent = "Selecione uma cidade para a análise.";
@@ -150,6 +157,10 @@ function applyTheme(theme) {
         isDark ? "Ativar modo claro" : "Ativar modo escuro"
     );
     themeToggle.setAttribute("aria-pressed", String(isDark));
+
+    if (historicalData && climateChartInstances.length > 0) {
+        renderClimateCharts(historicalData);
+    }
 }
 
 function toggleTheme() {
@@ -239,7 +250,7 @@ function processHistoricalData(daily, firstYear, lastYear) {  //transformar regi
     for (let year = firstYear; year <= lastYear; year++) {
         annualBuckets[year] = {
             temperatureSum: 0,
-            recipitationSum: 0,
+            precipitationSum: 0,
             temperatureCount: 0,
             precipitationCount: 0
         };
@@ -290,6 +301,15 @@ function processHistoricalData(daily, firstYear, lastYear) {  //transformar regi
         const annual = annualBuckets[year];
         const expectedDays = new Date(year, 1, 29).getMonth() === 1 ? 366 : 365;
 
+        // adicao temoraria para correcao de grafico
+        console.log("Diagnóstico anual:", {
+            year,
+            expectedDays,
+            precipitationSum: annual.precipitationSum,
+            precipitationCount: annual.precipitationCount
+        });
+        // fim da adicao
+        
         annualData.push({
             year,
             temperature: annual.temperatureCount === expectedDays
@@ -338,6 +358,137 @@ function processHistoricalData(daily, firstYear, lastYear) {  //transformar regi
         monthly: monthlyData
     };
 }
+
+        // preparar para receber graficos
+function destroyClimateCharts() {
+    climateChartInstances.forEach((chart) => {
+        chart.destroy();
+    });
+
+    climateChartInstances = [];
+    climateCharts.hidden = true;
+}
+
+function createClimateChart(canvasId, type, labels, values, title, unit) {
+    const isDark = currentTheme === "dark";
+
+    const textColor = isDark ? "#f9fafb" : "#1d2939";
+    const gridColor = isDark ? "#475569" : "#e2e8f0";
+
+    const chartColor = type === "line" ? "#f59e0b" : "#38bdf8";
+
+    const chart = new Chart(document.getElementById(canvasId), {
+        type: type,
+        data: {
+            labels: labels,
+            datasets: [{
+                label: title,
+                data: values,
+                borderColor: chartColor,
+                backgroundColor: chartColor,
+                borderWidth: 2,
+                tension: 0.25,
+                spanGaps: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+
+            plugins: {
+                legend: {
+                    labels: {
+                        color: textColor
+                    }
+                },
+
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            return `${title}: ${context.parsed.y} ${unit}`;
+                        }
+                    }
+                }
+            },
+
+            scales: {
+                x: {
+                    ticks: {
+                        color: textColor,
+                        maxRotation: 45
+                    },
+                    grid: {
+                        color: gridColor
+                    }
+                },
+                y: {
+                    beginAtZero: type === "bar",
+                    ticks: {
+                        color: textColor
+                    },
+                    grid: {
+                        color: gridColor
+                    },
+                    title: {
+                        display: true,
+                        text: unit,
+                        color: textColor
+                    }
+                }
+            }
+        }
+    });
+
+    climateChartInstances.push(chart);
+}
+
+
+function renderClimateCharts(data) {
+    destroyClimateCharts();
+
+    climateCharts.hidden = false;
+
+    const years = data.annual.map((item) => item.year);
+    const months = data.monthly.map((item) => item.month);
+
+    createClimateChart(
+        "annual-temperature-chart",
+        "line",
+        years,
+        data.annual.map((item) => item.temperature),
+        "Temperatura média anual",
+        "°C"
+    );
+
+    createClimateChart(
+        "annual-precipitation-chart",
+        "bar",
+        years,
+        data.annual.map((item) => item.precipitation),
+        "Precipitação anual",
+        "mm"
+    );
+
+    createClimateChart(
+        "monthly-temperature-chart",
+        "line",
+        months,
+        data.monthly.map((item) => item.temperature),
+        "Temperatura média mensal",
+        "°C"
+    );
+
+    createClimateChart(
+        "monthly-precipitation-chart",
+        "bar",
+        months,
+        data.monthly.map((item) => item.precipitation),
+        "Precipitação média mensal",
+        "mm"
+    );
+}
+
+
 
 function renderHistoricalSummary(data) {
     historicalSummary.replaceChildren();
@@ -397,6 +548,7 @@ async function handleHistoricalSearch() {
         );
 
         renderHistoricalSummary(historicalData);
+        renderClimateCharts(historicalData);
         historicalStatus.textContent = "Consulta concluída.";
 
         console.table(historicalData.annual);

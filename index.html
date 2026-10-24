@@ -109,9 +109,40 @@
 
             <div id="historical-summary" hidden></div>
 
+            <div id="climate-charts" hidden>
+                <div class="chart-card">
+                    <h3>Temperatura média anual</h3>
+                    <div class="chart-container">
+                        <canvas id="annual-temperature-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3>Precipitação acumulada anual</h3>
+                    <div class="chart-container">
+                        <canvas id="annual-precipitation-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3>Temperatura média mensal do período</h3>
+                    <div class="chart-container">
+                        <canvas id="monthly-temperature-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3>Precipitação média mensal do período</h3>
+                    <div class="chart-container">
+                        <canvas id="monthly-precipitation-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
         </section>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
