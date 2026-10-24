@@ -423,5 +423,23 @@ main {
     }
 }
 
+#city-search-form button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+#load-history[aria-busy="true"] {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.status-error {
+    color: #b91c1c;
+}
+
+[data-theme="dark"] .status-error {
+    color: #fca5a5;
+}
+
 
 /* UTILITIES */

@@ -81,9 +81,28 @@ let historicalData = null;
 let climateChartInstances = [];
 
 
+let citySearchRequestId = 0;
+let citySelectionRequestId = 0;
+let historicalRequestId = 0;
+
 
 // FUNCOES
-  // Historico climatico - criar as opções de ano para ambos os campos
+   //mensagens e respostas HTTP
+function setStatus(element, message, isError = false) {
+    element.textContent = message;
+    element.classList.toggle("status-error", isError);
+}
+
+async function fetchJson(url) {
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Falha na API: HTTP ${response.status}`);
+    }
+    return response.json();
+}
+
+
+   // Historico climatico - criar as opções de ano para ambos os campos
 function populateYearSelects() {
     const lastCompleteYear = new Date().getFullYear() - 1;
 
@@ -106,31 +125,56 @@ function populateYearSelects() {
     }
 }
 
-function updateHistoricalSelection() {
+function invalidateHistoricalResults() {
+    historicalRequestId++;
+
     historicalData = null;
     historicalSummary.hidden = true;
+
     destroyClimateCharts();
 
+    loadHistoryButton.disabled = false;
+    loadHistoryButton.textContent = "Consultar histórico";
+    loadHistoryButton.setAttribute("aria-busy", "false");
+}
+
+
+function updateHistoricalSelection() {
+    invalidateHistoricalResults();
+
     if (!selectedCity) {
-        historicalStatus.textContent = "Selecione uma cidade para a análise.";
+        setStatus(
+        historicalStatus,
+        "Selecione uma cidade para a análise."
+        );
         return;
     }
 
     if (startYear === null || endYear === null) {
-        historicalStatus.textContent = "Selecione o ano inicial e o ano final.";
+        setStatus(
+        historicalStatus,
+        "Selecione o ano inicial e o ano final."
+        );
         return;
     }
 
     if (startYear > endYear) {
-        historicalStatus.textContent = "O ano inicial não pode ser maior que o ano final.";
+        setStatus(
+        historicalStatus,
+        "O ano inicial não pode ser maior que o ano final.",
+        true
+        );
         return;
     }
 
     const totalYears = endYear - startYear + 1;
 
-    historicalStatus.textContent = 
-        `Período selecionado: ${selectedCity.name}, ${selectedCity.country} — ${startYear} a ${endYear} (${totalYears} anos).`;
+    setStatus(
+        historicalStatus,
+        `Período selecionado: ${selectedCity.name}, ${selectedCity.country} — ${startYear} a ${endYear} (${totalYears} anos).`
+    );
 }
+
 
 function handlePeriodChange() {
     startYear = startYearSelect.value
@@ -175,14 +219,7 @@ function toggleTheme() {
 async function searchCities(cityName) {
     const url = `${GEOCODING_API_URL}?name=${encodeURIComponent(cityName)}&count=5&language=pt`;
 
-    const response = await fetch(url);
-
-    if(!response.ok) {
-        throw new Error("Falha na consulta da cidade.");
-    }
-
-    const data = await response.json();
-
+    const data = await fetchJson(url);
     return data.results || [];
 }
 
@@ -193,13 +230,11 @@ async function searchCurrentWeather(city) {
 
     const url = `${WEATHER_API_URL}?latitude=${city.latitude}&longitude=${city.longitude}&current=${variables}&timezone=auto`;
 
-    const response = await fetch(url);
+    const data = await fetchJson(url);
 
-    if (!response.ok) {
-        throw Error("Falha na consulta meteorológica.");
+    if (!data.current) {
+        throw Error("Dados do clima atual indisponível.");
     }
-
-    const data = await response.json();
 
     return data.current;
 }
@@ -210,13 +245,12 @@ async function searchDailyForecast(city) {
 
     const url = `${WEATHER_API_URL}?latitude=${city.latitude}&longitude=${city.longitude}&daily=${variables}&timezone=auto&forecast_days=5`;
 
-    const response = await fetch(url);
+    const data = await fetchJson(url);
 
-    if (!response.ok) {
-        throw new Error("Falha na consulta da previsão.");
+    if (!data.daily) {
+        throw new Error("Dados da previsão indisponíveis.");
     }
 
-    const data = await response.json();
     return data.daily;
 }
 
@@ -228,16 +262,14 @@ async function searchHistoricalWeather(city, firstYear, lastYear) {  //consultar
     const endDate = `${lastYear}-12-31`;
 
     const url = `${HISTORICAL_API_URL}?latitude=${city.latitude}&longitude=${city.longitude}&start_date=${startDate}&end_date=${endDate}&daily=${variables}&timezone=auto&models=era5`;
-    const response = await fetch(url);
+    const data = await fetchJson(url);
 
-    if (!response.ok) {
-    throw new Error(`Falha na consulta histórica: HTTP ${response.status}`);
-    }
-    
-    const data = await response.json();
-
-    if (!data.daily) {
-        throw new Error("A API não retornou dados diários.");
+    if (
+        !Array.isArray(data.daily?.time) ||
+        !Array.isArray(data.daily?.temperature_2m_mean) ||
+        !Array.isArray(data.daily?.precipitation_sum)
+    ) {
+        throw new Error("Dados históricos ausentes ou inválidos.");
     }
 
     return data.daily;
@@ -519,47 +551,91 @@ function renderHistoricalSummary(data) {
     historicalSummary.hidden = false;
 }
 
+
 async function handleHistoricalSearch() {
     if (!selectedCity || startYear === null || endYear === null) {
-        historicalStatus.textContent = "Selecione uma cidade e o período.";
+        setStatus(
+        historicalStatus,
+        "Selecione uma cidade e o período.",
+        true
+        );
         return;
     }
 
     if (startYear > endYear) {
-        historicalStatus.textContent = "O ano inicial não pode ser maior que o final.";
+        setStatus(
+        historicalStatus,
+        "O ano inicial não pode ser maior que o final.",
+        true
+        );
         return;
     }
 
+    invalidateHistoricalResults();
+
+    const requestId = historicalRequestId;
+    const city = selectedCity;
+    const firstYear = startYear;
+    const lastYear = endYear;
+
     loadHistoryButton.disabled = true;
-    historicalSummary.hidden = true;
-    historicalData = null;
-    historicalStatus.textContent = "Consultando dados históricos...";
+    loadHistoryButton.textContent = "Consultando...";
+    loadHistoryButton.setAttribute("aria-busy", "true");
+
+    setStatus(historicalStatus, "Consultando dados históricos...");
 
     try {
         const daily = await searchHistoricalWeather(
-            selectedCity,
-            startYear,
-            endYear
+        city,
+        firstYear,
+        lastYear
         );
-        historicalData = processHistoricalData(
-            daily,
-            startYear,
-            endYear
+
+        if (requestId !== historicalRequestId) return;
+
+        const processedData = processHistoricalData(
+        daily,
+        firstYear,
+        lastYear
         );
+
+        if (requestId !== historicalRequestId) return;
+
+        historicalData = processedData;
 
         renderHistoricalSummary(historicalData);
         renderClimateCharts(historicalData);
-        historicalStatus.textContent = "Consulta concluída.";
+
+        setStatus(
+        historicalStatus,
+        `Consulta concluída: ${city.name}, ${firstYear}–${lastYear}.`
+        );
 
         console.table(historicalData.annual);
         console.table(historicalData.monthly);
-    } catch (error) {
-        historicalStatus.textContent = "Erro ao consultar o histórico climático.";
-        console.error(error);
-    } finally {
-        loadHistoryButton.disabled = false;
-    }
 
+    } catch (error) {
+        if (requestId !== historicalRequestId) return;
+
+        historicalData = null;
+        historicalSummary.hidden = true;
+        destroyClimateCharts();
+
+        setStatus(
+        historicalStatus,
+        "Não foi possível consultar ou processar os dados históricos.",
+        true
+        );
+
+        console.error(error);
+
+    } finally {
+        if (requestId === historicalRequestId) {
+        loadHistoryButton.disabled = false;
+        loadHistoryButton.textContent = "Consultar histórico";
+        loadHistoryButton.setAttribute("aria-busy", "false");
+        }
+    }
 }
 
 
@@ -612,21 +688,31 @@ function renderDailyForecast(daily) {
     });
 }
 
-async function loadDailyForecast(city) {
+async function loadDailyForecast(city, requestId) {
     forecastList.replaceChildren();
-    forecastStatus.textContent = "Consultando previsão...";
+    setStatus(forecastStatus, "Consultando previsão...");
 
     try {
         const daily = await searchDailyForecast(city);
 
+        if (requestId !== citySelectionRequestId) return;
+
         renderDailyForecast(daily);
-        forecastStatus.textContent = "";
+        setStatus(forecastStatus, "");
 
     } catch (error) {
-        forecastStatus.textContent = "Não foi possível consultar a previsão.";
+        if (requestId !== citySelectionRequestId) return;
+
+        setStatus(
+        forecastStatus,
+        "Não foi possível consultar a previsão.",
+        true
+        );
+
         console.error(error);
     }
 }
+
 
   // Salvar histórico das cidades
 function saveRecentCity(city) {
@@ -674,22 +760,38 @@ function renderRecentCities() {
 
   //integrar os clickes
 async function handleCitySelection(city) {
+    const requestId = ++citySelectionRequestId;
+
     selectedCity = city;
     updateHistoricalSelection();
-    
-    loadDailyForecast (city);
+
     weatherCard.hidden = true;
-    weatherStatus.textContent = `Consultando o clima de ${city.name}...`;
+
+    setStatus(
+        weatherStatus,
+        `Consultando clima de ${city.name}...`
+    );
+
+    loadDailyForecast(city, requestId);
 
     try {
         const weather = await searchCurrentWeather(city);
 
+        if (requestId !== citySelectionRequestId) return;
+
         renderCurrentWeather(city, weather);
         saveRecentCity(city);
-        weatherStatus.textContent = "";
+        setStatus(weatherStatus, "");
 
     } catch (error) {
-        weatherStatus.textContent = "Não foi possível consultar o clima.";
+        if (requestId !== citySelectionRequestId) return;
+
+        setStatus(
+        weatherStatus,
+        "Não foi possível consultar o clima atual.",
+        true
+        );
+
         console.error(error);
     }
 }
@@ -743,29 +845,42 @@ async function handleCitySearch(event) {
         return;
     }
 
-    cityResultsList.replaceChildren();
-    searchStatus.textContent = "Pesquisando cidades...";
-
+    const requestId = ++citySearchRequestId;
     const searchButton = citySearchForm.querySelector("button");
+
+    cityResultsList.replaceChildren();
+    setStatus(searchStatus, "Pesquisando cidades...");
+
     searchButton.disabled = true;
+    searchButton.textContent = "Pesquisando...";
+
 
     try {
         const cities = await searchCities(cityName);
 
+        if (requestId !== citySearchRequestId) return;
+
         if (cities.length === 0) {
-            searchStatus.textContent = "Nenhuma cidade encontrada.";
+            setStatus(searchStatus, "Nenhuma cidade encontrada.");
             return;
         }
 
         renderCities(cities);
-        searchStatus.textContent = `${cities.length} localidade(s) encontrada(s).`;
-
+        setStatus(searchStatus, `${cities.length} localidade(s) encontrada(s).`);
     } catch (error) {
-        searchStatus.textContent = "Erro ao consultar cidades. Tente novamente.";
-        console.error(error);
+        if (requestId !== citySearchRequestId) return;
+        setStatus(
+            searchStatus,
+            "Não foi possível pesquisar cidades. Verifique sua conexão.",
+            true
+        );
 
+        console.error(error);
     } finally {
-        searchButton.disabled = false;
+        if (requestId === citySearchRequestId) {
+            searchButton.disabled = false;
+            searchButton.textContent = "Pesquisar";
+        }
     }
 }
 
