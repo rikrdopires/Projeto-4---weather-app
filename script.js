@@ -8,6 +8,11 @@ const HISTORY_STORAGE_KEY = "weather-recent-cities";
 
 const THEME_STORAGE_KEY = "weather-theme";
 
+const FIRST_HISTORICAL_YEAR = 1940;
+
+const HISTORICAL_API_URL = "https://archive-api.open-meteo.com/v1/archive";
+
+
 
 // SELETORES DOM
    // consulte clima cidade
@@ -42,6 +47,13 @@ const recentCitiesList = document.getElementById("recent-cities-list");
   // Tema escuro
 const themeToggle = document.getElementById("theme-toggle");
 
+  // Histórico climático - controle de intervalo
+const startYearSelect = document.getElementById("start-year");
+const endYearSelect = document.getElementById("end-year");
+const historicalStatus = document.getElementById("historical-status");
+
+const loadHistoryButton = document.getElementById("load-history");
+const historicalSummary = document.getElementById("historical-summary");
 
 
 // ESTADOS
@@ -50,15 +62,83 @@ let recentCities = JSON.parse(
     localStorage.getItem(HISTORY_STORAGE_KEY) || "[]"
 );
 
-  //  tema escuro
+  //  Tema escuro
 let currentTheme = localStorage.getItem(THEME_STORAGE_KEY) === "dark"
     ? "dark"
     : "light";
 
+  // Histórico climático
+let selectedCity = null;
+let startYear = null;
+let endYear = null;
+
+let historicalData = null;
+
 
 
 // FUNCOES
-   // Aplicar e alterar tema
+  // Historico climatico - criar as opções de ano para ambos os campos
+function populateYearSelects() {
+    const lastCompleteYear = new Date().getFullYear() - 1;
+
+    for (
+        let year = lastCompleteYear;
+        year >= FIRST_HISTORICAL_YEAR;
+        year--
+    ) {
+        const startOption = document.createElement("option");
+        const endOption = document.createElement("option");
+
+        startOption.value = year;
+        startOption.textContent = year;
+
+        endOption.value = year;
+        endOption.textContent = year;
+
+        startYearSelect.appendChild(startOption);
+        endYearSelect.appendChild(endOption);
+    }
+}
+
+function updateHistoricalSelection() {
+    historicalData = null;
+    historicalSummary.hidden = true;
+
+    if (!selectedCity) {
+        historicalStatus.textContent = "Selecione uma cidade para a análise.";
+        return;
+    }
+
+    if (startYear === null || endYear === null) {
+        historicalStatus.textContent = "Selecione o ano inicial e o ano final.";
+        return;
+    }
+
+    if (startYear > endYear) {
+        historicalStatus.textContent = "O ano inicial não pode ser maior que o ano final.";
+        return;
+    }
+
+    const totalYears = endYear - startYear + 1;
+
+    historicalStatus.textContent = 
+        `Período selecionado: ${selectedCity.name}, ${selectedCity.country} — ${startYear} a ${endYear} (${totalYears} anos).`;
+}
+
+function handlePeriodChange() {
+    startYear = startYearSelect.value
+        ? Number(startYearSelect.value)
+        : null;
+
+    endYear = endYearSelect.value
+        ? Number(endYearSelect.value)
+        : null;
+    
+    updateHistoricalSelection();
+}
+
+
+  // Aplicar e alterar tema
 function applyTheme(theme) {
     document.documentElement.dataset.theme = theme;
 
@@ -127,6 +207,207 @@ async function searchDailyForecast(city) {
 
     const data = await response.json();
     return data.daily;
+}
+
+
+async function searchHistoricalWeather(city, firstYear, lastYear) {  //consultar a API histórica
+    const variables = "temperature_2m_mean,precipitation_sum";
+
+    const startDate = `${firstYear}-01-01`;
+    const endDate = `${lastYear}-12-31`;
+
+    const url = `${HISTORICAL_API_URL}?latitude=${city.latitude}&longitude=${city.longitude}&start_date=${startDate}&end_date=${endDate}&daily=${variables}&timezone=auto&models=era5`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+    throw new Error(`Falha na consulta histórica: HTTP ${response.status}`);
+    }
+    
+    const data = await response.json();
+
+    if (!data.daily) {
+        throw new Error("A API não retornou dados diários.");
+    }
+
+    return data.daily;
+}
+
+function processHistoricalData(daily, firstYear, lastYear) {  //transformar registros diários em dados da análise climática
+    const annualBuckets = {};
+    const monthlyBuckets = {};
+
+    for (let year = firstYear; year <= lastYear; year++) {
+        annualBuckets[year] = {
+            temperatureSum: 0,
+            recipitationSum: 0,
+            temperatureCount: 0,
+            precipitationCount: 0
+        };
+    
+        for (let month = 1; month <= 12; month++) {
+            const key = `${year}-${month}`;
+            monthlyBuckets[key] = {
+                temperatureSum: 0,
+                precipitationSum: 0,
+                temperatureCount: 0,
+                precipitationCount: 0
+            };
+        }
+    }
+
+    daily.time.forEach((date, index) => {
+        const [year, month] = date.split("-").map(Number);
+        const temperature = daily.temperature_2m_mean[index];
+        const precipitation = daily.precipitation_sum[index];
+
+        const annual = annualBuckets[year];
+        const monthly = monthlyBuckets[`${year}-${month}`];
+
+        if (Number.isFinite(temperature)) {
+            annual.temperatureSum += temperature;
+            annual.temperatureCount++;
+            monthly.temperatureSum += temperature;
+            monthly.temperatureCount++;
+        }
+
+        if (Number.isFinite(precipitation)) {
+            annual.precipitationSum += precipitation;
+            annual.precipitationCount++;
+            monthly.precipitationSum += precipitation;
+            monthly.precipitationCount++;
+        }
+    });
+
+    const annualData = [];
+    const monthlyTotals = Array.from({ length: 12 }, () => ({
+        temperatureSum: 0,
+        temperatureCount: 0,
+        precipitationSum: 0,
+        precipitationCount: 0
+    }));
+
+    for (let year = firstYear; year <= lastYear; year++) {
+        const annual = annualBuckets[year];
+        const expectedDays = new Date(year, 1, 29).getMonth() === 1 ? 366 : 365;
+
+        annualData.push({
+            year,
+            temperature: annual.temperatureCount === expectedDays
+                ? annual.temperatureSum / annual.temperatureCount
+                : null,
+            precipitation: annual.precipitationCount === expectedDays
+                ? annual.precipitationSum
+                : null
+        });
+
+        for (let month = 1; month <= 12; month++) {
+            const bucket = monthlyBuckets[`${year}-${month}`];
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const total = monthlyTotals[month - 1];
+
+            if (bucket.temperatureCount === daysInMonth) {
+                total.temperatureSum += bucket.temperatureSum;
+                total.temperatureCount += bucket.temperatureCount;
+            }
+
+            if (bucket.precipitationCount === daysInMonth) {
+                total.precipitationSum += bucket.precipitationSum;
+                total.precipitationCount++;
+            }
+        }
+    }
+
+    const monthNames = [
+    "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+    "Jul", "Ago", "Set", "Out", "Nov", "Dez"
+    ];
+
+    const monthlyData = monthlyTotals.map((total, index) => ({
+        month: monthNames[index],
+        temperature: total.temperatureCount > 0
+            ? total.temperatureSum / total.temperatureCount
+            : null,
+        precipitation: total.precipitationCount > 0
+            ? total.precipitationSum / total.precipitationCount
+            : null,
+        precipitationYears: total.precipitationCount
+    }));
+
+    return {
+        annual: annualData,
+        monthly: monthlyData
+    };
+}
+
+function renderHistoricalSummary(data) {
+    historicalSummary.replaceChildren();
+
+    const title = document.createElement("h3");
+    const annualInfo = document.createElement("p");
+    const monthlyInfo = document.createElement("p");
+
+    const validTemperatureYears = data.annual.filter(
+        (item) => item.temperature !== null
+    ).length;
+
+    const validPrecipitationYears = data.annual.filter(
+        (item) => item.precipitation !== null
+    ).length;
+
+    title.textContent = "Dados históricos preparados";
+
+    annualInfo.textContent =
+        `Análise anual: ${validTemperatureYears} anos com temperatura e ${validPrecipitationYears} anos com precipitação completas.`;
+    
+    monthlyInfo.textContent =
+        "Análise mensal: 12 meses organizados para cálculo das médias do período.";
+    historicalSummary.appendChild(title);
+    historicalSummary.appendChild(annualInfo);
+    historicalSummary.appendChild(monthlyInfo);
+
+    historicalSummary.hidden = false;
+}
+
+async function handleHistoricalSearch() {
+    if (!selectedCity || startYear === null || endYear === null) {
+        historicalStatus.textContent = "Selecione uma cidade e o período.";
+        return;
+    }
+
+    if (startYear > endYear) {
+        historicalStatus.textContent = "O ano inicial não pode ser maior que o final.";
+        return;
+    }
+
+    loadHistoryButton.disabled = true;
+    historicalSummary.hidden = true;
+    historicalData = null;
+    historicalStatus.textContent = "Consultando dados históricos...";
+
+    try {
+        const daily = await searchHistoricalWeather(
+            selectedCity,
+            startYear,
+            endYear
+        );
+        historicalData = processHistoricalData(
+            daily,
+            startYear,
+            endYear
+        );
+
+        renderHistoricalSummary(historicalData);
+        historicalStatus.textContent = "Consulta concluída.";
+
+        console.table(historicalData.annual);
+        console.table(historicalData.monthly);
+    } catch (error) {
+        historicalStatus.textContent = "Erro ao consultar o histórico climático.";
+        console.error(error);
+    } finally {
+        loadHistoryButton.disabled = false;
+    }
+
 }
 
 
@@ -241,6 +522,9 @@ function renderRecentCities() {
 
   //integrar os clickes
 async function handleCitySelection(city) {
+    selectedCity = city;
+    updateHistoricalSelection();
+    
     loadDailyForecast (city);
     weatherCard.hidden = true;
     weatherStatus.textContent = `Consultando o clima de ${city.name}...`;
@@ -344,9 +628,16 @@ citySearchForm.addEventListener("submit", handleCitySearch);
  // alternancia de tema
 themeToggle.addEventListener("click", toggleTheme);
 
+  // Historico climatico - validar selecao de dadas
+startYearSelect.addEventListener("change", handlePeriodChange);
+endYearSelect.addEventListener("change", handlePeriodChange);
+
+loadHistoryButton.addEventListener("click", handleHistoricalSearch);
 
 
 // INICIALIZACAO
 renderRecentCities();
 
 applyTheme(currentTheme);
+
+populateYearSelects();

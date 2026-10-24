@@ -80,6 +80,36 @@
 
             <ul id="recent-cities-list"></ul>
         </section>
+
+        <section id="climate-history" aria-labelledby="climate-title">
+            <h2 id="climate-title">Histórico Climático</h2>
+            <p>Selecione o período para análisar temperatura e precipitação</p>
+
+            <div class="history-controls">
+                <div class="history-field">
+                    <label for="start-year">Ano inicial</label>
+                    <select id="start-year">
+                        <option value="">Selecione</option>
+                    </select>
+                </div>
+
+                <div class="history-field">
+                    <label for="end-year">Ano final</label>
+                    <select id="end-year">
+                        <option value="">Selecione</option>
+                    </select>
+                </div>
+            </div>
+
+            <button id="load-history" type="button">Consultar</button>
+
+            <p id="historical-status" role="status" aria-live="polite">
+                Selecione uma cidade e o período de análise
+            </p>
+
+            <div id="historical-summary" hidden></div>
+
+        </section>
     </main>
 
     <script src="script.js"></script>

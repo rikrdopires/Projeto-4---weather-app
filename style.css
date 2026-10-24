@@ -297,4 +297,95 @@ main {
     outline-offset: 3px;
 }
 
+  /* bloco histórico climático */
+#climate-history {
+    margin-top: 32px;
+    margin-bottom: 32px;
+}
+
+.history-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    max-width: 600px;
+    margin-top: 24px;
+}
+
+.history-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.history-field select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    font: inherit;
+    cursor: pointer;
+}
+
+.history-field select:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+#historical-status {
+    margin-top: 16px;
+}
+
+@media (max-width: 480px) {
+    .history-controls {
+        grid-template-columns: 1fr;
+    }
+}
+
+#load-history {
+    margin-top: 20px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--color-primary);
+    color: var(--color-button-text);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#load-history:hover {
+    background-color: var(--color-primary-hover);
+}
+
+#load-history:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+#load-history:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+}
+
+#historical-summary {
+    max-width: 600px;
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background-color: var(--color-surface);
+}
+
+#historical-summary[hidden] {
+    display: none;
+}
+
+#historical-summary p {
+    margin-bottom: 8px;
+}
+
+
+
 /* UTILITIES */
